@@ -1953,7 +1953,22 @@ function summaryText(){
 }
 
 /* ---------- storage ---------- */
-function load(){ try { const d = JSON.parse(localStorage.getItem(STORE) || 'null'); if (d && d.games) db = d; } catch (e) {} }
+function load(){ moveIn(); try { const d = JSON.parse(localStorage.getItem(STORE) || 'null'); if (d && d.games) db = d; } catch (e) {} }
+// Games kept on a device before the move to bball.kansasmediarankings.com (2026-11-02) live in the old address's
+// storage. The old address hands them over in window.name as it forwards here; the newer copy of a game wins.
+function moveIn(){
+  try {
+    if (!String(window.name).startsWith('hoopsmove:')) return;
+    const src = JSON.parse(window.name.slice(10)); window.name = '';
+    const cur = JSON.parse(localStorage.getItem(STORE) || 'null') || {games:{}};
+    cur.games = cur.games || {};
+    let added = 0;
+    Object.values((src && src.games) || {}).forEach(x => { if (!x || !x.id || x.sample) return; const have = cur.games[x.id]; if (!have || (x.updated || 0) > (have.updated || 0)){ cur.games[x.id] = x; added++; } });
+    if (src && src.teams && typeof src.teams === 'object') cur.teams = Object.assign({}, src.teams, cur.teams || {});
+    if (added && !cur.cur) cur.cur = src.cur;
+    localStorage.setItem(STORE, JSON.stringify(cur));
+  } catch (e) {}
+}
 function persist(){ try { localStorage.setItem(STORE, JSON.stringify(db)); } catch (e) {} }
 function save(){ if (!g) return; g.updated = Date.now(); db.games[g.id] = g; db.cur = g.id; persist(); syncPush(g); }
 function setCurrent(){ if (!g) return; db.games[g.id] = g; db.cur = g.id; persist(); }
